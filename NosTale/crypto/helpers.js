@@ -1,8 +1,11 @@
 var conversionTable = [0x00, 0x20, 0x2D, 0x2E, 0x30, 0x31, 0x32, 0x33,
                         0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x0A, 0x00];
 
+var GamePtrSig = SigScan('8B35????????A1????????8B00');
+var GamePtr = GamePtrSig.read(7);
+
 function isGame() {
-    var ret = Ptr(Ptr(Ptr(0x686260)), 0x31).value.get();
+    var ret = Ptr(Ptr(GamePtr), 0x31).value.get();
     return uint8(ret);
 }
 
