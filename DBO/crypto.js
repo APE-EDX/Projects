@@ -1,10 +1,55 @@
-// Random seed: 91AB2489 (at 0x23D41008 + 4)
-// Table at: 23D41018
-
 var SHRD = function(x, y, b) {
     x >>>= b;
     x |= (y << (32 - b));
     return x;
+}
+
+function Packet(data) {
+    this.buffer = data || [];
+    this.counter = 0;
+
+    this.mask = function(len) {
+        if (len == 1) return 0xFF;
+        if (len == 2) return 0xFFFF;
+        if (len == 3) return 0xFFFFFF;
+        if (len == 4) return 0xFFFFFFFF;
+        return 0;
+    }
+
+    this.read = function(len) {
+        var counter = this.counter;
+
+        // Current read padding
+        var remaining = counter % 4;
+        var readLen = Math.min(len, 4 - remaining);
+
+        // Read
+        this.counter += readLen;
+
+        var pad = (3 - remaining - (readLen - 1)) * 8;
+        var mask = this.mask(readLen) << pad || 1;
+
+        // Is it 4 bytes aligned?
+        if (remaining == 0) {
+            return (this.buffer[counter / 4] & mask) >>> pad;
+        }
+
+        // Read current
+        var idx = counter >>> 2; // Integer division by 4
+        var ret = (this.buffer[idx] & mask) >>> pad;
+
+        // Is there more?
+        if (len > 4 - remaining) {
+            ret <<= (4 - remaining) * 8;
+            ret |= this.read(4 - remaining);
+        }
+
+        return ret;
+    }
+}
+
+function alive(crypto) {
+
 }
 
 function Crypto(seed) {
@@ -107,6 +152,40 @@ function Crypto(seed) {
         }
     }
 
+    this.Encrypt = function(x) {
+        // First step uses 2 DWORD at once
+        // integer result of /8 division
+        var numberOfQWords = x.length >>> 3;
+
+        // Keep a local copy
+        var counter = this.counter;
+
+        // Apply to all QWORDs
+        for (var n = 0; n < numberOfQWords; ++n) {
+            // Duplicates counter and shifts << 8 (all at once, << 9)
+            var dupCounter = (counter & 0x1FF) << 9;
+            var idx = uint32(dupCounter) + this.counter;
+
+            var x0 = x.read(4) ^ table[idx * 2];
+            var x1 = x.read(4) ^ table[idx * 2 + 1];
+
+            // x0 ^= ([EBP + 10] = 0)
+            // x1 ^= ([EBP + 14] = 0)
+        }
+
+        var remainingQwords = x.length % 8;
+        if (remainingQwords) {
+            //counter = this.counter << 9; // [ESP + 30]
+            var idx = (counter & 0x1FF) + (this.counter << 9);
+
+            var x0 = x.read(4) ^ table[idx * 2];
+            var x1 = x.read(4) ^ table[idx * 2 + 1];
+        }
+
+        // Update packet counter
+        ++this.counter;
+    }
+
     // EAX = 80AC1937
     this.state0 = 0x80AC1937;
     // EDX = 91AB2489
@@ -117,6 +196,16 @@ function Crypto(seed) {
 
     // Table
     this.table = [];
+
+    // Packet counter
+    this.counter = 0;
+
+    // Generate all
+    for (var n = 0; n < 0x3D; ++n) {
+        this.GenerateSeeds();
+    }
 }
 
-// SEED 1: 23D51008
+// SEED1 = 01462D38
+// STATE0 = 80AC1937
+// STATE1 = 91AB2489

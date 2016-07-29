@@ -1,4 +1,5 @@
 // Some counters
+var fakeAll = true;
 var sendNumber = 1;
 var recvNumber = 0;
 
@@ -15,8 +16,8 @@ var customSend = function(socket, bufs, count, bytes, flags, overlapped, complet
     ++sendNumber;
 
     // Call original function
-    if (sendNumber < 3) {
-        var ret = this.fn(socket, bufs, count, bytes, flags, overlapped, completion);
+    if (!fakeAll || sendNumber < 3) {
+        return this.fn(socket, bufs, count, bytes, flags, overlapped, completion);
     }
 
     // Fake everything. Set the bytes sent to len and return 0 (no error)
@@ -38,7 +39,7 @@ var customRecv = function(socket, bufs, count, bytes, flags, overlapped, complet
     var ret = -1;
 
     // Call original only if it is during the handshake process (2 packets)
-    if (recvNumber < 2) {
+    if (!fakeAll || recvNumber < 2) {
         ret = this.fn(socket, bufs, count, bytes, flags, overlapped, completion);
 
         // If result is not -1, it was received fine
