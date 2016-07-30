@@ -1,5 +1,5 @@
 
-function Packet(data) {
+function Packet(data, isTemp) {
 
     this.toString = function() {
         return this.id() || "Packet " + this._num + " [" + this.length() + "]";
@@ -16,34 +16,34 @@ function Packet(data) {
     this.read = function(len) {
         var _read = function(pos) {
             switch (len) {
-                case 1: return this.buffer.getUint8(pos);
-                case 2: return this.buffer.getUint16(pos);
-                case 3: return (this.buffer.getUint8(pos) << 16) |
+                case 1: return this.buffer.getUint8(pos, true);
+                case 2: return this.buffer.getUint16(pos, true);
+                case 3: return (this.buffer.getUint8(pos, true) << 16) |
                     this.buffer.getUint16(pos + 1);
-                case 4: return this.buffer.getUint32(pos);
+                case 4: return this.buffer.getUint32(pos, true);
             }
         }
 
-        var ret = _read.apply(this, [this.counter]);
-        this.counter += len;
+        var ret = _read.apply(this, [this.readPos]);
+        this.readPos += len;
         return ret;
     };
 
     this.write = function(len, value) {
         var _write = function(pos) {
             switch (len) {
-                case 1: return this.buffer.setUint8(pos, value);
-                case 2: return this.buffer.setUint16(pos, value);
-                case 3: return this.buffer.setUint8(pos, (value & 0xFF0000) >> 16) &&
-                    this.buffer.setUint16(pos + 1, value & 0x00FFFF);
-                case 4: return this.buffer.setUint32(pos, value);
+                case 1: return this.buffer.setUint8(pos, value, true);
+                case 2: return this.buffer.setUint16(pos, value, true);
+                case 3: return this.buffer.setUint8(pos, (value & 0xFF0000) >> 16, true) &&
+                    this.buffer.setUint16(pos + 1, value & 0x00FFFF, true);
+                case 4: return this.buffer.setUint32(pos, value, true);
             }
         }
 
         var newPos = this.writePos + len;
         if (newPos > this.buffer.byteLength) {
             var newBuffer = new Uint8Array(newPos + this._accumulated);
-            newBuffer.set(this.buffer.buffer);
+            newBuffer.set(new Uint8Array(this.buffer.buffer));
             this.buffer = new DataView(newBuffer.buffer);
 
             // Do not over allocate
@@ -69,7 +69,7 @@ function Packet(data) {
     this._num = Packet.num;
 
     // Increment counter
-    ++Packet.num;
+    !isTemp && (++Packet.num);
 }
 
 // Default to 1 as first packet

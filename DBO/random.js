@@ -1,7 +1,12 @@
-var Random = function(seed) {
+var SHRD = function(x, y, b) {
+    x >>>= b;
+    x |= (y << (32 - b));
+    return x;
+}
 
-    this.GenerateSimple = function(arg) {
-        var ECX = arg; // ESP + 4??
+var Random = function(state0, state1, innerLoops, outterLoops) {
+
+    this.GenerateSimple = function() {
         var ESI, EBP, EBX;
         var EAX = this.state0;
         var EDX = this.state1;
@@ -57,7 +62,7 @@ var Random = function(seed) {
     }
 
     this.GenerateSeeds = function() {
-        for (var n = 0; n < 0x200; ++n) {
+        for (var n = 0; n < this.innerLoops; ++n) {
             this.GenerateSimple(this.seed);
             this.table.push(this.state0);
             this.table.push(this.state1);
@@ -70,7 +75,7 @@ var Random = function(seed) {
         var idx = 6;
         //var EAX = EBX;
 
-        for (var n = 3; n < 0x200; n += 7)
+        for (var n = 3; n < this.innerLoops; n += 7)
         {
             EBX = this.table[idx]
             EBP = this.table[idx + 1];
@@ -99,19 +104,19 @@ var Random = function(seed) {
         }
     }
 
-    // EAX = 80AC1937
-    this.state0 = 0x80AC1937;
-    // EDX = 91AB2489
-    this.state1 = 0x91AB2489;
+    // Save number of loops
+    this.innerLoops = innerLoops;
 
-    // ARG = 01462D38
-    this.seed = seed;
+    // EAX = 80AC1937
+    this.state0 = state0;
+    // EDX = 91AB2489
+    this.state1 = state1;
 
     // Table
     this.table = [];
 
     // Generate all
-    for (var n = 0; n < 0x3D; ++n) {
+    for (var n = 0; n < outterLoops; ++n) {
         this.GenerateSeeds();
     }
 }
