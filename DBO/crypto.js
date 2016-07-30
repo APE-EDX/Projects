@@ -3,7 +3,7 @@ function Crypto(seed) {
     this.Encrypt = function(x, opcode) {
         // First step uses 2 DWORD at once
         // integer result of /8 division
-        var numberOfQWords = x.length() >>> 3;
+        var numberOfQWords = x.bufferLength() >>> 3;
 
         // Keep a local copy
         var counter = this.counter;
@@ -12,15 +12,13 @@ function Crypto(seed) {
 
         // Encrypted packet
         var crypted = new Packet;
-        crypted.write(1, x.length());
-        crypted.write(1, 0x80);
+        crypted.write(2, x.bufferLength() | 0x8000);
 
         // Apply to all QWORDs
         for (var n = 0; n < numberOfQWords; ++n) {
             var idx = uint32(counter & 0x1FF) + dupCounter;
 
-            var a = x.read(4);
-            var x0 = a ^ this.random.table[idx * 2];
+            var x0 = x.read(4) ^ this.random.table[idx * 2];
             var x1 = x.read(4) ^ this.random.table[idx * 2 + 1];
             // x0 ^= ([EBP + 10] = 0)
             // x1 ^= ([EBP + 14] = 0)
@@ -32,7 +30,7 @@ function Crypto(seed) {
             ++counter;
         }
 
-        var remainingQwords = x.length() % 8;
+        var remainingQwords = x.bufferLength() % 8;
         if (remainingQwords) {
             //counter = this.counter << 9; // [ESP + 30]
             var idx = (counter & 0x1FF) + dupCounter;

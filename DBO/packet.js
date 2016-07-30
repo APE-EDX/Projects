@@ -10,8 +10,12 @@ function Packet(data, isTemp) {
     }
 
     this.length = function() {
-        return this.writePos;
+        return this.buffer.getUint16(0, true) & 0x7FFF;
     };
+
+    this.bufferLength = function() {
+        return this.writePos;
+    }
 
     this.read = function(len) {
         var _read = function(pos) {
