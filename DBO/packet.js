@@ -1,6 +1,14 @@
 
 function Packet(data) {
 
+    this.toString = function() {
+        return this.id() || "Packet " + this._num + " [" + this.length() + "]";
+    }
+
+    this.id = function() {
+        return null;
+    }
+
     this.length = function() {
         return this.writePos;
     };
@@ -26,7 +34,7 @@ function Packet(data) {
             switch (len) {
                 case 1: return this.buffer.setUint8(pos, value);
                 case 2: return this.buffer.setUint16(pos, value);
-                case 3: return this.buffer.setUint8(pos, (value & 0xFF0000) >> 16) |
+                case 3: return this.buffer.setUint8(pos, (value & 0xFF0000) >> 16) &&
                     this.buffer.setUint16(pos + 1, value & 0x00FFFF);
                 case 4: return this.buffer.setUint32(pos, value);
             }
@@ -37,7 +45,11 @@ function Packet(data) {
             var newBuffer = new Uint8Array(newPos + this._accumulated);
             newBuffer.set(this.buffer.buffer);
             this.buffer = new DataView(newBuffer.buffer);
-            this._accumulated *= 2;
+
+            // Do not over allocate
+            if (this._accumulated < 32) {
+                this._accumulated *= 2;
+            }
         }
 
         var ret = _write.apply(this, [this.writePos]);
@@ -52,4 +64,13 @@ function Packet(data) {
 
     // Write expanding
     this._accumulated = 1;
+
+    // Save packet number
+    this._num = Packet.num;
+
+    // Increment counter
+    ++Packet.num;
 }
+
+// Default to 1 as first packet
+Packet.num = 1;
